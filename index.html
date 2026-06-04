@@ -1299,6 +1299,33 @@
     .map-day-btn.active { background: var(--primary); color: white; box-shadow: 0 3px 12px rgba(108,92,231,0.35); }
     .map-day-btn:active { transform: scale(0.96); }
 
+    /* Start/Accommodation Point Highlights */
+    .loc-action-btn.start-point-btn.active-start {
+      color: #FF7675 !important;
+      background: #FFF0F0 !important;
+      border-color: rgba(255, 118, 117, 0.2) !important;
+    }
+    .loc-action-btn.start-point-btn:hover {
+      color: #FF7675;
+      background: #FFF0F0;
+    }
+
+    /* Night Activity Cards Highlighting */
+    .loc-item.night-activity {
+      border-left: 4px solid #3F51B5 !important;
+      background: #F5F6FD;
+    }
+    .loc-item.night-activity .loc-name {
+      color: #1A237E;
+    }
+    .timeline-item.night-activity {
+      border-left: 4px solid #3F51B5 !important;
+      background: #F5F6FD;
+    }
+    .timeline-item.night-activity .timeline-item-title {
+      color: #1A237E;
+    }
+
     /* ═══════════════════════════════════════════
        RESPONSIVE CONFIGS (MOBILE & TABLET)
        ═══════════════════════════════════════════ */
@@ -2052,6 +2079,28 @@
     </div>
   </div>
 
+  <!-- Modal 7: Select Start Point Modal -->
+  <div class="modal" id="modalSelectStartPoint">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Konaklama Noktası Seçimi</h3>
+        <button class="modal-close" onclick="closeSelectStartPointModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 10px;">
+        <div style="font-size: 32px; color: var(--primary); text-align: center; margin-bottom: 8px;"><i class="ti ti-home"></i></div>
+        <p id="selectStartPointPrompt" style="font-size: 13.5px; font-weight: 600; color: var(--ink); text-align: center; margin-bottom: 16px; line-height: 1.4;">
+          Lütfen bu gün için konaklama / başlangıç noktanızı seçin.
+        </p>
+        <div id="selectStartPointList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; padding: 4px;">
+          <!-- Options will be populated dynamically -->
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="action-btn secondary" onclick="closeSelectStartPointModal()" style="width: 100%;">İptal</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div class="toast" id="toast">
     <i class="ti ti-info-circle"></i>
@@ -2545,6 +2594,9 @@
       let bestIndices = [];
       let minDist = Infinity;
       
+      // Look for a designated starting point (hotel / accommodation)
+      const startIndex = locations.findIndex(l => l.isStartPoint);
+      
       if (n <= 8) {
         // Exact solution via permutations
         const indices = Array.from({length: n}, (_, i) => i);
@@ -2568,10 +2620,16 @@
           }
         }
         
-        permute(indices);
+        if (startIndex !== -1) {
+          // If start index is fixed, start permutation with startIndex, only permute remaining indices
+          const unvisited = indices.filter(idx => idx !== startIndex);
+          permute(unvisited, [startIndex]);
+        } else {
+          permute(indices);
+        }
       } else {
-        // Heuristic Nearest-Neighbor (Multi-Start)
-        for (let startIdx = 0; startIdx < n; startIdx++) {
+        // Heuristic Nearest-Neighbor
+        const runNearestNeighbor = (startIdx) => {
           let path = [startIdx];
           let unvisited = Array.from({length: n}, (_, i) => i).filter(idx => idx !== startIdx);
           
@@ -2597,6 +2655,16 @@
           if (total < minDist) {
             minDist = total;
             bestIndices = path;
+          }
+        };
+        
+        if (startIndex !== -1) {
+          // Only start NN search from the selected starting point
+          runNearestNeighbor(startIndex);
+        } else {
+          // Fallback to Multi-Start NN starting from all nodes
+          for (let startIdx = 0; startIdx < n; startIdx++) {
+            runNearestNeighbor(startIdx);
           }
         }
       }
@@ -2710,28 +2778,10 @@
         const dayLocs = allLocs.filter(l => l.day === d);
         if (dayLocs.length === 0) continue;
         
-        const nightLocs = dayLocs.filter(isNightActivity);
-        const dayOnlyLocs = dayLocs.filter(l => !isNightActivity(l));
+        const matrix = await fetchOSRMDistanceMatrix(dayLocs);
+        const sortedDayLocs = solveTSP(dayLocs, matrix);
         
-        let sortedDayLocs = [];
-        if (dayOnlyLocs.length > 0) {
-          const matrix = await fetchOSRMDistanceMatrix(dayOnlyLocs);
-          sortedDayLocs = solveTSP(dayOnlyLocs, matrix);
-        }
-        
-        let sortedNightLocs = [];
-        if (nightLocs.length > 0) {
-          const referenceLoc = sortedDayLocs[sortedDayLocs.length - 1];
-          if (referenceLoc) {
-            sortedNightLocs = [...nightLocs].sort((a, b) => {
-              return calculateDistance(referenceLoc, a) - calculateDistance(referenceLoc, b);
-            });
-          } else {
-            sortedNightLocs = [...nightLocs];
-          }
-        }
-        
-        finalLocations = finalLocations.concat(sortedDayLocs, sortedNightLocs);
+        finalLocations = finalLocations.concat(sortedDayLocs);
       }
       
       const alternativeLocs = allLocs.filter(l => l.day === null);
@@ -2761,11 +2811,16 @@
       }
     }
     
+    let pendingOptimizationAllowClustering = false;
+
     async function runOptimizationFlow(allowDayClustering) {
       closeOptimizeChoiceModal(true);
       
       if (!activeTrip) return;
-      showToast('⏳ Güzergâh optimize ediliyor...');
+      
+      if (allowDayClustering) {
+        clusterLocationsIntoDays();
+      }
       
       const activeLocs = activeTrip.locations.filter(l => l.day !== null);
       if (activeLocs.length < 2) {
@@ -2774,10 +2829,29 @@
         return;
       }
       
-      if (allowDayClustering) {
-        clusterLocationsIntoDays();
+      pendingOptimizationAllowClustering = allowDayClustering;
+      
+      // Check start points for each day
+      const daysMap = {};
+      activeTrip.locations.filter(l => l.day !== null).forEach(l => {
+        if (!daysMap[l.day]) daysMap[l.day] = [];
+        daysMap[l.day].push(l);
+      });
+      
+      const missingStartDays = [];
+      Object.keys(daysMap).forEach(dNum => {
+        const dayLocs = daysMap[dNum];
+        if (dayLocs.length >= 2 && !dayLocs.some(l => l.isStartPoint)) {
+          missingStartDays.push(parseInt(dNum));
+        }
+      });
+      
+      if (missingStartDays.length > 0) {
+        promptForStartPoint(missingStartDays[0], missingStartDays.slice(1));
+        return;
       }
       
+      showToast('⏳ Güzergâh optimize ediliyor...');
       await optimizeAllDaysTSP();
       
       showToast('✨ Güzergâh en efektif şekilde optimize edildi!');
@@ -2786,6 +2860,99 @@
       // After route is computed, go to map tab on mobile
       if (window.innerWidth <= 768) {
         setTimeout(() => { switchAppView('map'); updateMapTopBar(); fitMapToVisible(); }, 800);
+      }
+    }
+
+    function promptForStartPoint(dayNum, remainingDays = []) {
+      const modal = document.getElementById('modalSelectStartPoint');
+      const promptText = document.getElementById('selectStartPointPrompt');
+      const listContainer = document.getElementById('selectStartPointList');
+      
+      if (!modal || !promptText || !listContainer) return;
+      
+      promptText.innerHTML = `🏠 <strong>${dayNum}. Gün</strong> için konaklayacağınız / başlayacağınız yeri seçin:`;
+      listContainer.innerHTML = '';
+      
+      const dayLocs = activeTrip.locations.filter(l => l.day === dayNum);
+      
+      dayLocs.forEach(loc => {
+        const item = document.createElement('div');
+        item.className = 'select-start-point-item';
+        item.style.cssText = `
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 14px;
+          border: 1px solid var(--border);
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        `;
+        item.innerHTML = `
+          <div style="font-size: 18px; color: var(--ink3);"><i class="ti ti-home"></i></div>
+          <div style="flex:1; font-weight: 500; font-size:13px; color:var(--ink);">${loc.name}</div>
+          <div style="font-size: 11px; color: var(--ink3);">${loc.region}</div>
+        `;
+        
+        item.onmouseenter = () => {
+          item.style.background = 'var(--primary-bg)';
+          item.style.borderColor = 'var(--primary)';
+        };
+        item.onmouseleave = () => {
+          item.style.background = 'transparent';
+          item.style.borderColor = 'var(--border)';
+        };
+        
+        item.onclick = async () => {
+          // Set this location as start point
+          toggleStartPoint(loc.id);
+          
+          closeSelectStartPointModal(true);
+          
+          // Check if there are other missing days
+          if (remainingDays.length > 0) {
+            setTimeout(() => {
+              promptForStartPoint(remainingDays[0], remainingDays.slice(1));
+            }, 300);
+          } else {
+            // All starting points set! Run optimization
+            showToast('⏳ Güzergâh optimize ediliyor...');
+            rotaActive = true;
+            const btn = document.getElementById('btnRouteToggle');
+            if (btn) {
+              btn.classList.add('active');
+              btn.innerHTML = '<i class="ti ti-route"></i> Güzergâhı Kapat';
+            }
+            await optimizeAllDaysTSP();
+            showToast('✨ Güzergâh en efektif şekilde optimize edildi!');
+            updateRoute();
+            
+            // Go to map tab on mobile
+            if (window.innerWidth <= 768) {
+              setTimeout(() => { switchAppView('map'); updateMapTopBar(); fitMapToVisible(); }, 800);
+            }
+          }
+        };
+        
+        listContainer.appendChild(item);
+      });
+      
+      modal.classList.add('open');
+    }
+
+    function closeSelectStartPointModal(isSuccess = false) {
+      const modal = document.getElementById('modalSelectStartPoint');
+      if (modal) {
+        modal.classList.remove('open');
+      }
+      if (!isSuccess) {
+        rotaActive = false;
+        const btn = document.getElementById('btnRouteToggle');
+        if (btn) {
+          btn.classList.remove('active');
+          btn.innerHTML = '<i class="ti ti-route"></i> Güzergâh Çiz ve Hesapla';
+        }
+        updateRoute();
       }
     }
 
@@ -4297,7 +4464,7 @@
     /* ═══════════════════════════════════════════
        INTERACTIVE MAP MARKERS GENERATION
        ═══════════════════════════════════════════ */
-    function getMarkerIcon(loc, index) {
+     function getMarkerIcon(loc, index) {
       const isOneri = loc.day === null;
       if (isOneri) {
         const isSelected = selectedId === loc.id;
@@ -4314,12 +4481,23 @@
         });
       }
 
+      // Check if starting point or night activity
+      const isStart = !!loc.isStartPoint;
+      const isNight = isNightActivity(loc);
+      
       const color = DAYS[loc.day] || '#6C5CE7';
       const isSelected = selectedId === loc.id;
       const size = isSelected ? 38 : 30;
       
       const mainCat = loc.cats[0] || 'oneri';
-      const iconName = CATS[mainCat] ? CATS[mainCat].icon : 'map-pin';
+      let iconName = CATS[mainCat] ? CATS[mainCat].icon : 'map-pin';
+      
+      if (isStart) {
+        iconName = 'home';
+      } else if (isNight) {
+        iconName = 'moon';
+      }
+      
       const iconHtml = `<i class="ti ti-${iconName}"></i>`;
       const pulse = isSelected ? `<div class="marker-pulse" style="background:${color};"></div>` : '';
 
@@ -4534,7 +4712,8 @@
         activeVis.forEach((l, idx) => {
           const div = document.createElement('div');
           const isSelected = selectedId === l.id;
-          div.className = 'loc-item' + (isSelected ? ' selected' : '');
+          const isNight = isNightActivity(l);
+          div.className = 'loc-item' + (isSelected ? ' selected' : '') + (isNight ? ' night-activity' : '');
           div.draggable = true;
           
           div.ondragstart = (e) => handleDragStart(e, orderedLocs.findIndex(x => x.id === l.id));
@@ -4549,7 +4728,9 @@
           };
 
           const catsHtml = l.cats.map(c => `<span class="loc-cat cat-${c}">${CATS[c].label}</span>`).join('');
+          const nightBadge = isNight ? `<span class="loc-cat" style="background:#E8EAF6; color:#3F51B5; border:1px solid #C5CAE9;"><i class="ti ti-moon"></i> Gece</span>` : '';
           const ratingHtml = l.rating ? `<span class="loc-rating">★ ${l.rating}</span>` : '';
+          const startIconHtml = l.isStartPoint ? '<i class="ti ti-home" style="color:#FF7675; margin-right:4px;" title="Başlangıç/Konaklama Noktası"></i>' : '';
           
           let expandedHtml = '';
           if (isSelected) {
@@ -4559,15 +4740,17 @@
           div.innerHTML = `
             <div class="loc-order" style="background:${DAYBG[l.day] || '#f0ecfb'}; color:${DAYS[l.day] || '#6c5ce7'};">${idx + 1}</div>
             <div class="loc-body">
-              <div class="loc-name">${l.name}</div>
+              <div class="loc-name">${startIconHtml}${l.name}</div>
               <div class="loc-meta">
                 ${catsHtml}
+                ${nightBadge}
                 ${ratingHtml}
                 <span class="loc-dist">${l.day}. Gün Planı</span>
               </div>
               ${expandedHtml}
             </div>
             <div class="loc-actions" onclick="event.stopPropagation()">
+              <button class="loc-action-btn start-point-btn ${l.isStartPoint ? 'active-start' : ''}" onclick="toggleStartPoint(${l.id})" title="${l.isStartPoint ? 'Başlangıç Noktasını İptal Et' : 'Konaklama / Başlangıç Noktası Yap'}"><i class="ti ti-home"></i></button>
               <button class="loc-action-btn delete-btn" onclick="deactivateLocation(${l.id})" title="Plandan Çıkar"><i class="ti ti-x"></i></button>
               <button class="loc-action-btn loc-drag-handle" style="cursor:grab;"><i class="ti ti-menu-2"></i></button>
             </div>
@@ -4663,6 +4846,11 @@
               </select>
             </div>
             <div class="loc-maps-links">
+              ${l.day !== null ? `
+              <button class="loc-map-btn start-point-toggle-btn ${l.isStartPoint ? 'active' : ''}" onclick="toggleStartPoint(${l.id})" style="border: 1px solid ${l.isStartPoint ? '#FF7675' : 'var(--border)'}; background: ${l.isStartPoint ? '#FFF0F0' : 'transparent'}; color: ${l.isStartPoint ? '#FF7675' : 'var(--ink)'}; padding: 4px 8px; border-radius: var(--radius-sm); font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px; font-weight:600;" title="${l.isStartPoint ? 'Konaklama/Başlangıç Noktasını İptal Et' : 'Bu Konumu Konaklama/Başlangıç Noktası Yap'}">
+                <i class="ti ti-home"></i> ${l.isStartPoint ? 'Başlangıç Noktası' : 'Başlangıç Yap'}
+              </button>
+              ` : ''}
               <a href="https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lng}" target="_blank" class="loc-map-btn gmaps"><i class="ti ti-brand-google-maps"></i> Google</a>
               <a href="https://maps.apple.com/maps?daddr=${l.lat},${l.lng}" target="_blank" class="loc-map-btn apple"><i class="ti ti-brand-apple"></i> Apple</a>
             </div>
@@ -4738,7 +4926,8 @@
           dayLocs.forEach((l, idx) => {
             const itemDiv = document.createElement('div');
             const isSelected = selectedId === l.id;
-            itemDiv.className = `timeline-item ${isSelected ? 'selected' : ''}`;
+            const isNight = isNightActivity(l);
+            itemDiv.className = `timeline-item ${isSelected ? 'selected' : ''} ${isNight ? 'night-activity' : ''}`;
             
             const globalIndex = orderedLocs.findIndex(x => x.id === l.id);
             itemDiv.draggable = true;
@@ -4755,7 +4944,9 @@
             itemDiv.style.setProperty('--timeline-bullet-color', dayColor);
 
             const catsHtml = l.cats.map(c => `<span class="loc-cat cat-${c}">${CATS[c].label}</span>`).join('');
+            const nightBadge = isNight ? `<span class="loc-cat" style="background:#E8EAF6; color:#3F51B5; border:1px solid #C5CAE9;"><i class="ti ti-moon"></i> Gece</span>` : '';
             const ratingHtml = l.rating ? `<span class="loc-rating">★ ${l.rating}</span>` : '';
+            const startIconHtml = l.isStartPoint ? '<i class="ti ti-home" style="color:#FF7675; margin-right:4px;" title="Başlangıç/Konaklama Noktası"></i>' : '';
             
             let connHtml = '';
             if (rotaActive && idx < dayLocs.length - 1) {
@@ -4777,11 +4968,12 @@
 
             itemDiv.innerHTML = `
               <div class="timeline-item-title-row">
-                <div class="timeline-item-title">${l.name}</div>
+                <div class="timeline-item-title">${startIconHtml}${l.name}</div>
                 <div class="timeline-item-num" style="border-color:${dayColor}; color:${dayColor};">${idx + 1}</div>
               </div>
               <div class="loc-meta" style="margin-top:2px;">
                 ${catsHtml}
+                ${nightBadge}
                 ${ratingHtml}
               </div>
               ${expandedHtml}
@@ -5210,6 +5402,40 @@
       }
       updateRoute();
       showToast('🗑️ Konum tamamen silindi.');
+    }
+
+    function toggleStartPoint(locId) {
+      const loc = LOCATIONS.find(l => l.id === locId);
+      if (!loc || loc.day === null) return;
+      
+      const targetDay = loc.day;
+      const isCurrentlyStart = !!loc.isStartPoint;
+      
+      // Clear starting point for all other locations on this day
+      LOCATIONS.forEach(l => {
+        if (l.day === targetDay) {
+          l.isStartPoint = false;
+        }
+      });
+      
+      // Toggle
+      loc.isStartPoint = !isCurrentlyStart;
+      
+      saveTrips();
+      
+      if (rotaActive) {
+        optimizeAllDaysTSP().then(() => {
+          updateRoute();
+        });
+      } else {
+        updateRoute();
+      }
+      
+      if (loc.isStartPoint) {
+        showToast(`🏠 "${loc.name}" ${targetDay}. günün konaklama / başlangıç noktası olarak ayarlandı.`);
+      } else {
+        showToast(`🏠 "${loc.name}" başlangıç noktası iptal edildi.`);
+      }
     }
 
     /* ═══════════════════════════════════════════
