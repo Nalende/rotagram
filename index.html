@@ -172,6 +172,42 @@
     }
     .header-info-badge.hidden { opacity: 0; pointer-events: none; }
 
+    /* Header dynamic controls */
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-select-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s var(--ease);
+      border: 1px solid rgba(108, 92, 231, 0.08);
+    }
+    .header-select-wrapper:hover {
+      border-color: var(--primary-light);
+      background: #EAE6FF;
+    }
+    .header-select-wrapper select {
+      background: transparent;
+      border: none;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      outline: none;
+      max-width: 150px;
+      text-overflow: ellipsis;
+    }
+
     .main-container {
       display: flex;
       height: calc(100vh - var(--header-h));
@@ -191,6 +227,7 @@
       position: relative; z-index: 90;
       flex-shrink: 0;
       transition: width 0.3s var(--ease), transform 0.3s var(--ease);
+      padding-bottom: 62px;
     }
     
     .sidebar-view {
@@ -282,33 +319,45 @@
       background: var(--primary-bg);
       border: 1px solid var(--border2);
       border-radius: var(--radius-md);
-      padding: 14px 16px;
+      padding: 10px 12px;
       display: flex; align-items: center; justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
       position: relative; overflow: hidden;
+      min-width: 0;
+      flex-shrink: 0;
     }
     .location-widget-info {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; align-items: center; gap: 8px;
+      min-width: 0; flex: 1;
     }
     .location-widget-icon {
-      width: 36px; height: 36px; border-radius: 50%;
+      width: 28px; height: 28px; border-radius: 50%;
       background: var(--surface); color: var(--primary);
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; box-shadow: var(--shadow-sm);
+      font-size: 14px; box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
     }
     .location-widget-text {
-      display: flex; flex-direction: column; gap: 2px;
+      display: flex; flex-direction: column; gap: 0px;
+      min-width: 0; flex: 1; overflow: hidden;
     }
-    .location-widget-title { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; }
-    .location-widget-desc { font-size: 13px; font-weight: 600; color: var(--ink); }
+    .location-widget-title { font-size: 9px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2; }
+    .location-widget-desc { 
+      font-size: 11.5px; font-weight: 600; color: var(--ink); 
+      white-space: nowrap; text-overflow: ellipsis; overflow: hidden; 
+      display: block;
+      line-height: 1.3;
+    }
     
     /* Inline Weather Info */
     .location-widget-weather {
       text-align: right;
-      display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 0px;
+      flex-shrink: 0;
+      line-height: 1.2;
     }
-    .location-widget-temp { font-size: 16px; font-weight: 700; color: var(--ink); }
-    .location-widget-cond { font-size: 11px; font-weight: 500; color: var(--ink2); display: flex; align-items: center; gap: 4px; }
+    .location-widget-temp { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+    .location-widget-cond { font-size: 9px; font-weight: 500; color: var(--ink2); display: flex; align-items: center; gap: 2px; }
 
     /* Trips List Grid */
     .trips-section-header {
@@ -830,28 +879,84 @@
     }
     #map { width: 100%; height: 100%; z-index: 10; }
 
-    /* Custom layers control overlay */
-    .map-layer-control {
-      position: absolute; top: 16px; left: 16px; z-index: 30;
-      background: var(--surface-glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.4); border-radius: var(--radius-full);
-      padding: 4px; display: flex; gap: 2px;
+    /* Collapsible map layer controls */
+    .map-layer-control-wrapper {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 80;
+    }
+    .map-layer-toggle-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border2);
+      background: var(--surface-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--primary);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
       box-shadow: var(--shadow-md);
+      transition: all 0.2s var(--ease);
     }
-    .layer-btn {
-      padding: 7px 14px; border: none; background: transparent;
-      font-family: inherit; font-size: 11px; font-weight: 700;
-      color: var(--ink2); border-radius: var(--radius-full);
-      cursor: pointer; transition: all 0.2s;
+    .map-layer-toggle-btn:hover {
+      background: var(--primary-bg);
+      transform: scale(1.05);
     }
-    .layer-btn:hover { color: var(--ink); }
-    .layer-btn.active {
-      background: var(--primary-gradient); color: #fff;
+    .map-layer-menu {
+      position: absolute;
+      top: 46px;
+      right: 0;
+      background: var(--surface-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-md);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.2s var(--ease);
+      min-width: 110px;
+    }
+    .map-layer-menu.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .map-layer-menu .layer-btn {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink2);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .map-layer-menu .layer-btn:hover {
+      background: var(--bg-alt);
+      color: var(--ink);
+    }
+    .map-layer-menu .layer-btn.active {
+      background: var(--primary-gradient);
+      color: #fff;
     }
 
     /* Route Summary Overlay */
     .route-summary {
-      position: absolute; top: 16px; right: 16px; z-index: 30;
+      position: absolute; top: 16px; right: 72px; z-index: 30;
       background: var(--surface-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255,255,255,0.5); border-radius: var(--radius-lg);
       padding: 12px 16px; box-shadow: var(--shadow-lg);
@@ -969,7 +1074,9 @@
       background: var(--surface);
       border-top: 1px solid var(--border);
       padding: 0 12px;
-      position: relative;
+      position: absolute;
+      bottom: 0; left: 0;
+      width: var(--sidebar-w);
       z-index: 100;
       flex-shrink: 0;
       box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
@@ -1225,6 +1332,7 @@
         display: flex;
         flex-direction: column;
         background: var(--bg);
+        padding-bottom: 0 !important;
       }
 
       /* Bottom nav always on top */
@@ -1299,6 +1407,37 @@
       /* Map top bar — only visible on map screen */
       .map-top-bar { display: none; }
       .map-top-bar.mobile-visible { display: flex; }
+
+      /* Header controls on mobile */
+      .header-logo {
+        font-size: 20px;
+      }
+      .header-logo i {
+        font-size: 22px;
+      }
+      .header-controls {
+        gap: 6px;
+      }
+      .header-select-wrapper {
+        padding: 4px 8px;
+        gap: 4px;
+      }
+      .header-select-wrapper select {
+        font-size: 11px;
+        max-width: 90px;
+      }
+
+      /* Collapsible layer control on mobile */
+      .map-layer-control-wrapper {
+        top: 110px !important;
+        right: 12px !important;
+      }
+
+      /* Leaflet zoom control positioning on mobile */
+      .leaflet-bottom.leaflet-right {
+        bottom: calc(142px + env(safe-area-inset-bottom)) !important;
+        right: 12px !important;
+      }
     }
   </style>
 </head>
@@ -1314,8 +1453,23 @@
   <!-- Header -->
   <header class="header">
     <div class="header-logo" onclick="goHome()"><i class="ti ti-route"></i> Rotagram</div>
-    <div class="header-info-badge hidden" id="headerActiveTripBadge">
-      <i class="ti ti-map"></i> <span id="headerActiveTripName">—</span>
+    
+    <div class="header-controls" id="headerControls" style="display:none;">
+      <!-- Plan Selector Select -->
+      <div class="header-select-wrapper" id="headerTripWrapper">
+        <i class="ti ti-map"></i>
+        <select id="headerTripSelect" onchange="selectTrip(this.value)">
+          <!-- Loaded dynamically -->
+        </select>
+      </div>
+      
+      <!-- Day Selector Select -->
+      <div class="header-select-wrapper" id="headerDayWrapper">
+        <i class="ti ti-calendar"></i>
+        <select id="headerDaySelect" onchange="changeHeaderDayFilter(this.value)">
+          <!-- Loaded dynamically -->
+        </select>
+      </div>
     </div>
   </header>
 
@@ -1336,16 +1490,16 @@
           
           <!-- GPS Location Widget -->
           <div class="location-widget" id="locWidget">
-            <div class="location-widget-info">
+            <div class="location-widget-info" style="min-width:0; flex:1;">
               <div class="location-widget-icon">
                 <i class="ti ti-map-pin"></i>
               </div>
-              <div class="location-widget-text">
+              <div class="location-widget-text" style="min-width:0; flex:1; overflow:hidden;">
                 <span class="location-widget-title">Mevcut Konum</span>
-                <span class="location-widget-desc" id="widgetLocationName">Konum aranıyor...</span>
+                <span class="location-widget-desc" id="widgetLocationName" style="white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">Konum aranıyor...</span>
               </div>
             </div>
-            <div class="location-widget-weather" id="widgetWeather" style="display: none;">
+            <div class="location-widget-weather" id="widgetWeather" style="display: none; flex-shrink:0;">
               <span class="location-widget-temp" id="widgetWeatherTemp">—°C</span>
               <span class="location-widget-cond" id="widgetWeatherCond"><i class="ti ti-sun"></i> Güneşli</span>
             </div>
@@ -1584,33 +1738,33 @@
         <!-- Dynamically populated -->
       </div>
 
-      <!-- Fixed Bottom Nav (in sidebar for desktop, in bottom of screen for mobile) -->
-      <nav class="bottom-nav-bar">
-        <button class="nav-tab-btn active" data-tab="home" onclick="switchAppView('home')">
-          <i class="ti ti-smart-home"></i>
-          <span>Ana Sayfa</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="search" onclick="switchAppView('search')">
-          <i class="ti ti-search"></i>
-          <span>Arama</span>
-        </button>
-        <button class="nav-tab-btn highlight" data-tab="trips" onclick="switchAppView('trips')">
-          <div class="highlight-inner">
-            <i class="ti ti-map"></i>
-          </div>
-          <span>Planlarım</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="friends" onclick="switchAppView('friends')">
-          <i class="ti ti-users"></i>
-          <span>Arkadaşlar</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="map" onclick="switchAppView('map')">
-          <i class="ti ti-map-pin"></i>
-          <span>Harita</span>
-        </button>
-      </nav>
-
     </aside>
+
+    <!-- Fixed Bottom Nav (in bottom of screen for mobile/desktop) -->
+    <nav class="bottom-nav-bar">
+      <button class="nav-tab-btn active" data-tab="home" onclick="switchAppView('home')">
+        <i class="ti ti-smart-home"></i>
+        <span>Ana Sayfa</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="search" onclick="switchAppView('search')">
+        <i class="ti ti-search"></i>
+        <span>Arama</span>
+      </button>
+      <button class="nav-tab-btn highlight" data-tab="trips" onclick="switchAppView('trips')">
+        <div class="highlight-inner">
+          <i class="ti ti-map"></i>
+        </div>
+        <span>Planlarım</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="friends" onclick="switchAppView('friends')">
+        <i class="ti ti-users"></i>
+        <span>Arkadaşlar</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="map" onclick="switchAppView('map')">
+        <i class="ti ti-map-pin"></i>
+        <span>Harita</span>
+      </button>
+    </nav>
 
     <!-- Map Area Container -->
     <div class="map-container" id="mapContainer">
@@ -1632,12 +1786,17 @@
       <!-- Interactive Leaflet Map -->
       <div id="map"></div>
 
-      <!-- Leaflet Custom layers Control overlay -->
-      <div class="map-layer-control">
-        <button class="layer-btn active" data-layer="voyager" onclick="changeMapStyle('voyager')">Voyager</button>
-        <button class="layer-btn" data-layer="satellite" onclick="changeMapStyle('satellite')">Uydu</button>
-        <button class="layer-btn" data-layer="terrain" onclick="changeMapStyle('terrain')">Sokak</button>
-        <button class="layer-btn" data-layer="dark" onclick="changeMapStyle('dark')">Karanlık</button>
+      <!-- Leaflet Custom layers Control overlay (Collapsible & Responsive) -->
+      <div class="map-layer-control-wrapper" id="mapLayerControlWrapper">
+        <button class="map-layer-toggle-btn" onclick="toggleMapLayerMenu(event)" title="Harita Görünümü">
+          <i class="ti ti-layers-intersect"></i>
+        </button>
+        <div class="map-layer-menu" id="mapLayerMenu">
+          <button class="layer-btn active" data-layer="voyager" onclick="changeMapStyle('voyager')">Voyager</button>
+          <button class="layer-btn" data-layer="satellite" onclick="changeMapStyle('satellite')">Uydu</button>
+          <button class="layer-btn" data-layer="terrain" onclick="changeMapStyle('terrain')">Sokak</button>
+          <button class="layer-btn" data-layer="dark" onclick="changeMapStyle('dark')">Karanlık</button>
+        </div>
       </div>
 
       <!-- Route Driving Summary Overlay -->
@@ -2046,6 +2205,7 @@
         }
       }
       goHome();
+      updateHeaderControls();
     }
 
     /* ═══════════════════════════════════════════
@@ -2118,7 +2278,6 @@
       LOCATIONS = [];
       orderedLocs = [];
       selectedId = null;
-      document.getElementById('headerActiveTripBadge').classList.add('hidden');
       
       // Update subviews
       document.getElementById('tripsListSubView').style.display = 'flex';
@@ -2143,6 +2302,7 @@
       
       renderTripList();
       saveTrips();
+      updateHeaderControls();
     }
 
     function selectTrip(tripId) {
@@ -2167,8 +2327,6 @@
       
       // Set UI states
       document.getElementById('detailTripName').textContent = activeTrip.name;
-      document.getElementById('headerActiveTripName').textContent = activeTrip.name;
-      document.getElementById('headerActiveTripBadge').classList.remove('hidden');
       
       switchAppView('trips');
       
@@ -2187,6 +2345,7 @@
       fitMapToVisible();
       updateRecommendations();
       saveTrips();
+      updateHeaderControls();
     }
 
     /* ═══════════════════════════════════════════
@@ -2252,10 +2411,10 @@
       
       activeTrip.name = name;
       document.getElementById('detailTripName').textContent = name;
-      document.getElementById('headerActiveTripName').textContent = name;
       
       saveTrips();
       closeRenameTripModal();
+      updateHeaderControls();
       showToast('📝 Gezi adı güncellendi.');
     }
     
@@ -2269,7 +2428,6 @@
         LOCATIONS = [];
         orderedLocs = [];
         selectedId = null;
-        document.getElementById('headerActiveTripBadge').classList.add('hidden');
         if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
         osrmData = null;
         rotaActive = false;
@@ -2283,6 +2441,7 @@
       }
       saveTrips();
       renderTripList();
+      updateHeaderControls();
       // If no trips left, show trips view
       switchAppView('trips');
     }
@@ -2672,6 +2831,11 @@
       selectedDayFilter = dayVal;
       renderDayFilterChips();
       updateRoute();
+      
+      const headerSelect = document.getElementById('headerDaySelect');
+      if (headerSelect) {
+        headerSelect.value = dayVal;
+      }
     }
 
     function toggleTripSearch() {
@@ -2744,8 +2908,8 @@
       currentTileLayer = mapLayers.voyager;
       currentTileLayer.addTo(map);
       
-      // Position zoom controls in top-right
-      L.control.zoom({ position: 'topright' }).addTo(map);
+      // Position zoom controls in bottom-right
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
       
       markersLayer = L.layerGroup().addTo(map);
       
@@ -2766,6 +2930,9 @@
       document.querySelectorAll('.layer-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.layer === styleName);
       });
+      
+      const menu = document.getElementById('mapLayerMenu');
+      if (menu) menu.classList.remove('open');
     }
 
     function fitMapToVisible() {
@@ -3000,6 +3167,11 @@
         altBtn.textContent = 'Plan Dışı';
         altBtn.onclick = () => { selectedDayFilter = 'null'; updateMapDayFilter(); renderDayFilterChips(); updateRoute(); };
         container.appendChild(altBtn);
+      }
+      
+      const headerSelect = document.getElementById('headerDaySelect');
+      if (headerSelect) {
+        headerSelect.value = selectedDayFilter;
       }
     }
 
@@ -3292,6 +3464,50 @@
     let pendingLocationToAddToTrip = null;
     
     function openAddToTripAndDayModal(locData) {
+      if (activeTrip && selectedDayFilter !== 'all') {
+        // Auto-add to active trip and active day filter
+        const dayVal = selectedDayFilter === 'null' ? null : parseInt(selectedDayFilter);
+        const newLoc = {
+          id: Date.now() + Math.floor(Math.random() * 100),
+          name: locData.name,
+          lat: parseFloat(locData.lat),
+          lng: parseFloat(locData.lng),
+          day: dayVal,
+          cats: locData.cats || ['oneri'],
+          desc: locData.desc || 'Eklenen konum.',
+          rating: locData.rating || null,
+          hours: locData.hours || null,
+          tip: locData.tip || null,
+          region: locData.region || 'Türkiye',
+          userAdded: locData.userAdded !== undefined ? locData.userAdded : true
+        };
+        
+        activeTrip.locations.push(newLoc);
+        
+        // Refresh UI
+        LOCATIONS = activeTrip.locations;
+        orderedLocs = [...LOCATIONS];
+        if (dayVal !== null) {
+          activeDays.add(dayVal);
+        }
+        
+        if (rotaActive) {
+          optimizeAllDaysTSP().then(() => {
+            updateRoute();
+            renderTripList();
+            updateRecommendations();
+            showToast(`📍 "${newLoc.name}" başarıyla ${dayVal !== null ? dayVal + '. güne' : 'plana'} eklendi!`);
+          });
+        } else {
+          saveTrips();
+          updateRoute();
+          renderTripList();
+          updateRecommendations();
+          showToast(`📍 "${newLoc.name}" başarıyla ${dayVal !== null ? dayVal + '. güne' : 'plana'} eklendi!`);
+        }
+        return;
+      }
+
       pendingLocationToAddToTrip = locData;
       
       const tripSelect = document.getElementById('fAddLocationTripSelect');
@@ -3301,6 +3517,7 @@
         const opt = document.createElement('option');
         opt.value = t.id;
         opt.textContent = t.name;
+        if (activeTrip && activeTrip.id === t.id) opt.selected = true;
         tripSelect.appendChild(opt);
       });
       
@@ -5214,6 +5431,106 @@
       grid.appendChild(sampleLoaderDiv);
     }
 
+    function updateHeaderControls() {
+      const headerControls = document.getElementById('headerControls');
+      const headerTripSelect = document.getElementById('headerTripSelect');
+      const headerDaySelect = document.getElementById('headerDaySelect');
+      const headerDayWrapper = document.getElementById('headerDayWrapper');
+      
+      if (!headerControls || !headerTripSelect || !headerDaySelect || !headerDayWrapper) return;
+      
+      if (trips.length === 0) {
+        headerControls.style.display = 'none';
+        return;
+      }
+      
+      headerControls.style.display = 'flex';
+      
+      // Populate trips
+      headerTripSelect.innerHTML = '';
+      trips.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        if (activeTrip && activeTrip.id === t.id) {
+          opt.selected = true;
+        }
+        headerTripSelect.appendChild(opt);
+      });
+      
+      if (!activeTrip) {
+        headerDayWrapper.style.display = 'none';
+        return;
+      }
+      
+      headerDayWrapper.style.display = 'flex';
+      
+      // Populate days
+      headerDaySelect.innerHTML = '';
+      
+      const optAll = document.createElement('option');
+      optAll.value = 'all';
+      optAll.textContent = 'Tüm Günler';
+      if (selectedDayFilter === 'all') optAll.selected = true;
+      headerDaySelect.appendChild(optAll);
+      
+      // Gather unique days from activeTrip
+      const days = new Set();
+      activeTrip.locations.forEach(l => {
+        if (l.day !== null) days.add(l.day);
+      });
+      
+      const sortedDays = Array.from(days).sort((a, b) => a - b);
+      sortedDays.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = `${d}. Gün`;
+        if (selectedDayFilter == d) opt.selected = true;
+        headerDaySelect.appendChild(opt);
+      });
+      
+      const hasAlt = activeTrip.locations.some(l => l.day === null);
+      if (hasAlt) {
+        const optNull = document.createElement('option');
+        optNull.value = 'null';
+        optNull.textContent = 'Plan Dışı';
+        if (selectedDayFilter === 'null') optNull.selected = true;
+        headerDaySelect.appendChild(optNull);
+      }
+      
+      headerDaySelect.value = selectedDayFilter;
+    }
+
+    function changeHeaderDayFilter(dayVal) {
+      if (dayVal === 'all') {
+        selectedDayFilter = 'all';
+      } else if (dayVal === 'null') {
+        selectedDayFilter = 'null';
+      } else {
+        selectedDayFilter = parseInt(dayVal);
+      }
+      
+      renderDayFilterChips();
+      updateMapDayFilter();
+      updateRoute();
+      if (activeAppTab === 'map') {
+        fitMapToVisible();
+      }
+      
+      const headerSelect = document.getElementById('headerDaySelect');
+      if (headerSelect) {
+        headerSelect.value = dayVal;
+      }
+    }
+
+    function toggleMapLayerMenu(event) {
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('mapLayerMenu');
+      if (menu) {
+        menu.classList.toggle('open');
+      }
+    }
+
     /* ═══════════════════════════════════════════
        PAGE SETUP & WINDOW INITIAL LOAD
        ═══════════════════════════════════════════ */
@@ -5264,10 +5581,17 @@
       // Auto-close search results when clicking elsewhere
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.search-section')) {
-          document.getElementById('searchTabResults').classList.remove('active');
+          const res = document.getElementById('searchTabResults');
+          if (res) res.classList.remove('active');
         }
         if (!e.target.closest('.trip-search-section')) {
-          document.getElementById('tripSearchResults').classList.remove('active');
+          const res = document.getElementById('tripSearchResults');
+          if (res) res.classList.remove('active');
+        }
+        const layerWrapper = document.getElementById('mapLayerControlWrapper');
+        const layerMenu = document.getElementById('mapLayerMenu');
+        if (layerWrapper && layerMenu && !layerWrapper.contains(e.target)) {
+          layerMenu.classList.remove('open');
         }
       });
       
