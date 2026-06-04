@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Disable caching for dynamic updates -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Rotagram — Kişiselleştirilmiş Akıllı Gezi Planlayıcı</title>
   <meta name="description" content="Rotanı planla, keşfet, paylaş. Rotagram ile gezilerinizi yönetin, yakındaki popüler yerleri keşfedin ve yol tariflerini optimize edin.">
   <meta property="og:title" content="Rotagram — Akıllı Gezi Planlayıcı">
@@ -1769,19 +1773,7 @@
     <!-- Map Area Container -->
     <div class="map-container" id="mapContainer">
 
-      <!-- Map Top Bar: Plan selector + Day filters (shown on mobile map tab) -->
-      <div class="map-top-bar" id="mapTopBar">
-        <!-- Plan selector row -->
-        <div class="map-plan-row" id="mapPlanRow" style="display:none;">
-          <select class="map-plan-select" id="mapPlanSelect" onchange="switchTripFromMap(this.value)">
-            <!-- Populated by JS -->
-          </select>
-        </div>
-        <!-- Day filter buttons -->
-        <div class="map-day-filter" id="mapDayFilter">
-          <!-- Populated by JS -->
-        </div>
-      </div>
+
       
       <!-- Interactive Leaflet Map -->
       <div id="map"></div>
@@ -2232,10 +2224,10 @@
       if (isMobile) {
         if (tabName === 'map') {
           mapContainer.classList.add('mobile-map-visible');
-          mapTopBar.classList.add('mobile-visible');
+          if (mapTopBar) mapTopBar.classList.add('mobile-visible');
         } else {
           mapContainer.classList.remove('mobile-map-visible');
-          mapTopBar.classList.remove('mobile-visible');
+          if (mapTopBar) mapTopBar.classList.remove('mobile-visible');
         }
       }
       
@@ -2423,6 +2415,11 @@
       const wasActive = activeTrip && activeTrip.id == tripId;
       trips = trips.filter(t => t.id != tripId);
       showToast('🗑️ Gezi silindi.');
+      
+      const listSubView = document.getElementById('tripsListSubView');
+      const detailSubView = document.getElementById('viewTripDetail');
+      const listWasVisible = listSubView && listSubView.style.display === 'flex';
+      
       if (wasActive || trips.length === 0) {
         activeTrip = null;
         LOCATIONS = [];
@@ -2439,10 +2436,17 @@
         document.getElementById('routeSummary').classList.remove('show');
         renderMarkers();
       }
+      
       saveTrips();
       renderTripList();
       updateHeaderControls();
-      // If no trips left, show trips view
+      
+      // If we deleted the active trip or if we were already looking at the list, force showing the list
+      if (wasActive || listWasVisible || trips.length === 0) {
+        if (listSubView) listSubView.style.display = 'flex';
+        if (detailSubView) detailSubView.style.display = 'none';
+      }
+      
       switchAppView('trips');
     }
     
@@ -3621,9 +3625,13 @@
     /* ═══════════════════════════════════════════
        MAP CLICK PINNING & COORDINATE UTILS
        ═══════════════════════════════════════════ */
+    let pinningSourceView = null;
+
     function startMapPinning() {
       if (mapPinningActive) return;
       mapPinningActive = true;
+      pinningSourceView = activeAppTab;
+      switchAppView('map');
       map.getContainer().style.cursor = 'crosshair';
       showToast('📍 Konum seçmek için harita üzerinde bir yere tıklayın.');
       map.once('click', onMapPinClick);
@@ -3638,28 +3646,40 @@
       
       showToast('🔍 Seçilen koordinatlar çözümleniyor...');
       
-      document.getElementById('mLat').value = lat.toFixed(6);
-      document.getElementById('mLng').value = lng.toFixed(6);
-      document.getElementById('manualAddFormFields').style.display = 'flex';
+      let cleanName = 'Seçilen Konum';
+      let fullName = 'Haritadan seçilen koordinatlar.';
       
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${lat},${lng}&limit=1&email=muhammed.emin@example.com`;
       try {
         const res = await fetch(url);
         const data = await res.json();
         if (data && data.length > 0) {
-          const fullName = data[0].display_name;
-          const cleanName = data[0].name || fullName.split(',')[0];
-          document.getElementById('mName').value = cleanName;
-          document.getElementById('mDesc').value = fullName;
-        } else {
-          document.getElementById('mName').value = 'Seçilen Konum';
+          fullName = data[0].display_name;
+          cleanName = data[0].name || fullName.split(',')[0];
         }
       } catch (err) {
-        document.getElementById('mName').value = 'Seçilen Konum';
+        console.warn(err);
       }
       
-      showToast('📍 Koordinat alındı! Detayları doldurup ekleyebilirsiniz.');
-      document.getElementById('mName').focus();
+      const confirmAdd = confirm(`"${cleanName}" konumunu seyahat planına eklemek istiyor musunuz?`);
+      if (confirmAdd) {
+        const tempLocationData = {
+          name: cleanName,
+          lat: parseFloat(lat),
+          lng: parseFloat(lng),
+          cats: ['oneri'],
+          desc: fullName,
+          rating: null,
+          region: fullName.split(',')[1]?.trim() || 'Türkiye',
+          userAdded: true
+        };
+        
+        openAddToTripAndDayModal(tempLocationData);
+      }
+      
+      if (pinningSourceView) {
+        switchAppView(pinningSourceView);
+      }
     }
     
     function toggleCoordInputs() {
