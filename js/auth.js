@@ -17,7 +17,7 @@ function saveUserToDB(user) {
   localStorage.setItem('rotagram_users', JSON.stringify(users));
 }
 
-function handleLocalRegister(e) {
+async function handleLocalRegister(e) {
   if (e) e.preventDefault();
   const usernameInput = document.getElementById('regUsername');
   const emailInput = document.getElementById('regEmail');
@@ -39,6 +39,34 @@ function handleLocalRegister(e) {
     return;
   }
 
+  if (typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled) {
+    try {
+      showToast('⏳ Kayıt yapılıyor...');
+      const user = await firebaseRegister(username, email, password);
+      showToast(`🎉 Kayıt başarılı! Hoş geldiniz, ${user.username}!`);
+      
+      if (typeof loadTrips === 'function') {
+        loadTrips();
+      }
+      renderFriendsView();
+      if (typeof renderTripList === 'function') renderTripList();
+      if (typeof updateRecommendations === 'function') updateRecommendations();
+    } catch (err) {
+      console.error(err);
+      let errorMsg = err.message || 'Kayıt sırasında bir hata oluştu!';
+      if (err.code === 'auth/email-already-in-use') {
+        errorMsg = '⚠️ Bu e-posta adresiyle zaten kayıtlı bir kullanıcı var!';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = '⚠️ Geçersiz e-posta adresi!';
+      } else if (err.code === 'auth/weak-password') {
+        errorMsg = '⚠️ Şifre çok zayıf!';
+      }
+      showToast(errorMsg);
+    }
+    return;
+  }
+
+  // Local Storage Fallback
   const users = getUsers();
   if (users.some(u => u.email === email)) {
     showToast('⚠️ Bu e-posta adresiyle zaten kayıtlı bir kullanıcı var!');
@@ -62,7 +90,7 @@ function handleLocalRegister(e) {
   if (typeof updateRecommendations === 'function') updateRecommendations();
 }
 
-function handleLocalLogin(e) {
+async function handleLocalLogin(e) {
   if (e) e.preventDefault();
   const emailInput = document.getElementById('loginEmail');
   const passwordInput = document.getElementById('loginPassword');
@@ -77,6 +105,32 @@ function handleLocalLogin(e) {
     return;
   }
 
+  if (typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled) {
+    try {
+      showToast('⏳ Giriş yapılıyor...');
+      const user = await firebaseLogin(email, password);
+      showToast(`🔑 Giriş başarılı! Tekrar hoş geldiniz, ${user.username}.`);
+      
+      if (typeof loadTrips === 'function') {
+        loadTrips();
+      }
+      renderFriendsView();
+      if (typeof renderTripList === 'function') renderTripList();
+      if (typeof updateRecommendations === 'function') updateRecommendations();
+    } catch (err) {
+      console.error(err);
+      let errorMsg = err.message || 'Giriş sırasında bir hata oluştu!';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        errorMsg = '❌ E-posta veya şifre hatalı!';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = '⚠️ Geçersiz e-posta adresi!';
+      }
+      showToast(errorMsg);
+    }
+    return;
+  }
+
+  // Local Storage Fallback
   const users = getUsers();
   const user = users.find(u => u.email === email && u.password === password);
 
@@ -98,12 +152,20 @@ function handleLocalLogin(e) {
   if (typeof updateRecommendations === 'function') updateRecommendations();
 }
 
-function handleLocalLogout() {
+async function handleLocalLogout() {
   localStorage.removeItem('rotagram_user');
   localStorage.removeItem('rotagram_active_trip_id');
   currentUser = null;
 
   showToast('🚪 Başarıyla çıkış yapıldı.');
+
+  if (typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled) {
+    try {
+      await firebaseLogout();
+    } catch (err) {
+      console.error("Firebase logout error:", err);
+    }
+  }
 
   // Reload trips (will fall back to guest trips)
   if (typeof loadTrips === 'function') {
@@ -221,7 +283,10 @@ function renderFriendsView() {
             ${currentUser.username.substring(0, 2).toUpperCase()}
           </div>
           <div style="min-width:0; flex:1;">
-            <h3 style="font-size:14.5px; font-weight:700; color:var(--ink); margin:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${currentUser.username}</h3>
+            <h3 style="font-size:14.5px; font-weight:700; color:var(--ink); margin:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+              ${currentUser.username}
+              ${typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled ? `<span style="font-size:10px; padding:2px 6px; background:#e0f2fe; color:#0369a1; border-radius:10px; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><i class="ti ti-cloud-computing" style="font-size:11px;"></i> Bulut</span>` : ''}
+            </h3>
             <span style="font-size:11.5px; color:var(--ink2); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; display:block;">${currentUser.email}</span>
           </div>
           <button class="action-btn secondary" onclick="handleLocalLogout()" style="padding:6px 10px; font-size:11px; color:#e74c3c; border-color:rgba(231,76,60,0.15);" title="Çıkış Yap">
@@ -281,4 +346,47 @@ function renderFriendsView() {
       }
     }, 50);
   }
+}
+
+// Firebase Auth State Listener setup on file load
+if (typeof setupFirebaseListener === 'function' && typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled) {
+  setupFirebaseListener(
+    // On Login Callback
+    async (userData) => {
+      // 1. Fetch trips from Firestore database
+      const cloudTrips = await firebaseLoadTrips(userData.uid);
+      
+      // 2. Load locally cached storage trips for this user (if any)
+      const storageKey = `rotagram_trips_${userData.email}`;
+      const localCachedTrips = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      
+      // 3. Merging logic: if cloud is empty but local has trips, save local trips to cloud database
+      let mergedTrips = cloudTrips;
+      if (cloudTrips.length === 0 && localCachedTrips.length > 0) {
+        mergedTrips = localCachedTrips;
+        console.log("☁️ Yerel seyahat planları Firestore bulut veri tabanına yükleniyor...");
+        await firebaseSaveTrips(userData.uid, mergedTrips);
+      }
+      
+      // Cache the merged list in localStorage
+      localStorage.setItem(storageKey, JSON.stringify(mergedTrips));
+      
+      // Update app state and refresh UI
+      if (typeof loadTrips === 'function') {
+        loadTrips();
+      }
+      renderFriendsView();
+      if (typeof renderTripList === 'function') renderTripList();
+      if (typeof updateRecommendations === 'function') updateRecommendations();
+    },
+    // On Logout Callback
+    () => {
+      if (typeof loadTrips === 'function') {
+        loadTrips();
+      }
+      renderFriendsView();
+      if (typeof renderTripList === 'function') renderTripList();
+      if (typeof updateRecommendations === 'function') updateRecommendations();
+    }
+  );
 }

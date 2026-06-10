@@ -28,8 +28,12 @@
         localStorage.removeItem('rotagram_active_trip_id');
       }
 
-      if (user && typeof syncTripsToCloud === 'function') {
-        syncTripsToCloud();
+      if (user) {
+        if (typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled && currentUser && currentUser.uid) {
+          firebaseSaveTrips(currentUser.uid, trips);
+        } else if (typeof syncTripsToCloud === 'function') {
+          syncTripsToCloud();
+        }
       }
     }
 
