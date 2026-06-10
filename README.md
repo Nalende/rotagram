@@ -1,76 +1,98 @@
-# 🗺️ Rotagram — Akıllı Seyahat ve Rota Planlayıcı
+# 🗺️ Rotagram — Akıllı Seyahat Planlayıcı & Dinamik Rota Optimizasyonu
 
-Rotagram, seyahat planlarınızı kolayca oluşturmanızı, optimize etmenizi ve yönetmenizi sağlayan modern ve dinamik bir web uygulamasıdır. Kullanıcı dostu ve engelsiz arayüzü sayesinde seyahatlerinizi adım adım planlayabilir, harita üzerinde canlı rotalar çizebilirsiniz.
+[![GitHub version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/nalende/rotagram)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform: Web](https://img.shields.io/badge/Platform-Web-orange.svg)](https://nalende.github.io/rotagram/)
+[![Database: Firebase & LocalStorage](https://img.shields.io/badge/Database-Firebase%20%26%20LocalStorage-green.svg)](https://firebase.google.com/)
 
-🚀 **Canlı Demo:** [nalende.github.io/rotagram](https://nalende.github.io/rotagram/)
+**Rotagram**, seyahat severlerin rotalarını akıllı algoritmalarla optimize etmesini, keşfedilen yeni yerleri planlarına eklemesini ve güzergâhlarını dinamik olarak yönetmesini sağlayan modern, duyarlı ve arayüz odaklı bir **Web Seyahat Planlayıcısıdır**.
 
----
+HTML5, CSS3 ve modern ES6+ Javascript mimarisiyle sıfırdan geliştirilen Rotagram; **Leaflet.js**, **OSRM API** ve **Overpass API** entegrasyonlarıyla tamamen ücretsiz, sunucusuz (Serverless) ve yüksek hızlı bir harita deneyimi sunar.
 
-## ✨ Özellikler
-
-### 🔐 1. Yerel Giriş & Veri İzolasyonu
-* Sahte e-posta girişleri yerine tamamen `localStorage` tabanlı güvenli **Giriş Yap** ve **Kayıt Ol** mekanizması.
-* Her kullanıcının seyahat verileri kendi e-posta adresiyle (`rotagram_trips_${email}`) izole edilerek güvenle saklanır.
-
-### 🚗 2. Akıllı Rotalama (Yürüyüş vs Sürüş Seçimi)
-* Haritaya eklediğiniz duraklar arası mesafe **2 km ve altındaysa** otomatik olarak yürüyüş rotası (`OSM /foot/` profili) çizilir.
-* Mesafe **2 km'den fazla ise** sürüş rotası (`OSM /driving/` profili) hesaplanır.
-* Tüm bacaklar birleştirilerek haritada akıcı ve kesintisiz tek bir rota çizgisi ve adım adım yol tarifi sunulur.
-
-### 🌟 3. Dengeli ve Popüler Konum Önerileri
-* Overpass API entegrasyonu ile çevrenizdeki tarihi, turistik, gastronomi ve manzara noktaları otomatik listelenir.
-* Bir kategorinin listeyi domine etmesini önlemek amacıyla, her kategoriden **en fazla 3 öneri** gösterilir.
-
-### ⚡ 4. Engelsiz ve Hızlı Etkileşimler (Confirm-less UI)
-* Tarayıcıyı kilitleyen ve kullanıcıyı yoran eski `confirm()` onay pencereleri tamamen kaldırıldı!
-* Plan silme, durak silme ve çıkış yapma işlemleri anında gerçekleşir.
-* **Geri Al (Undo):** Silinen bir seyahat planı ekranın altında beliren modern bildirim panelindeki (Toast) "Geri Al" butonu ile tek tıkla kurtarılabilir.
-* Kart ekleme, silme ve sayfa geçişleri akıcı CSS animasyonlarıyla desteklenmiştir.
-
-### 💾 5. Gelişmiş Veri Yönetimi
-* Seyahat planlarınızı tekil veya toplu olarak **`.json`** formatında dışa aktarabilir (indirilebilir),
-* Daha önce indirdiğiniz veya paylaşılan planları tekrar uygulamaya **içe aktararak (yükleyerek)** anında harita üzerinde görüntüleyebilirsiniz.
+🚀 **Canlı Demo Deneyin:** [nalende.github.io/rotagram](https://nalende.github.io/rotagram/)
 
 ---
 
-## 🛠️ Kullanılan Teknolojiler
+## 💎 Temel Özellikler (Core Features)
 
-* **Frontend:** HTML5, Vanilla CSS3 (Custom Properties, Flexbox/Grid, Keyframe Animations)
-* **Logic:** Vanilla Javascript (ES6+)
-* **Harita & Rotalama:** Leaflet.js, OpenStreetMap (OSM) & OSRM API
-* **Öneri Arama:** Overpass API
-* **Veri Depolama:** Web LocalStorage API & Google Firebase (Authentication & Firestore)
+### 🔐 1. Hibrit Oturum ve Veri Depolama (Firebase & LocalStorage)
+*   **Google Firebase Entegrasyonu:** Kullanıcılar e-posta/şifre yöntemiyle güvenle kayıt olabilir, oturum açabilir ve planlarını bulutta yedekleyebilir.
+*   **Çevrimdışı Mod (Fallback):** Firebase anahtarları tanımlanmadığında veya bağlantı kesildiğinde, uygulama kesintisiz olarak **LocalStorage** üzerinde çalışmaya devam eder.
+*   **Akıllı Senkronizasyon (Smart Merge):** Çevrimdışı modda oluşturulan seyahat planları, kullanıcı ilk kez giriş yaptığında otomatik olarak bulut veri tabanına aktarılır.
+*   **Veri İzolasyonu:** Her kullanıcının seyahat verileri tamamen kendine özel depolanır.
+
+### 🚗 2. Akıllı Yönlendirme Algoritması (Smart Routing)
+*   Duraklar arası mesafe **2 km ve altındaysa** yürüyüş profili (`OSM /foot/`), **2 km'den fazla ise** sürüş profili (`OSM /driving/`) dinamik olarak seçilir.
+*   Farklı profillerden alınan rota geometrileri, haritada tek bir akıcı çizgi halinde birleştirilir ve adım adım yön tarifleri üretilir.
+*   OSRM cache engelleme mekanizması sayesinde rota değişiklikleri haritada anında güncellenir.
+
+### 📍 3. Coğrafi Veri Önerileri (Overpass API POI)
+*   Mevcut konumunuza veya aktif seyahat noktalarınıza yakın tarihi yerler, manzara noktaları, deniz kıyıları, gastronomik duraklar ve kültürel alanlar Overpass API ile aranır.
+*   **Kategori Kısıtlaması (Max 3):** Öneriler listelenirken her kategoriden en fazla 3 popüler nokta seçilir. Böylece listenin dengeli olması ve seyahatin çeşitlendirilmesi sağlanır.
+
+### ⚡ 4. Engelsiz ve Akıcı Kullanıcı Deneyimi (Confirm-less & Undo)
+*   Kullanıcıyı yoran ve tarayıcı akışını kesen `confirm()` pencereleri tamamen kaldırılmıştır.
+*   Plan veya konum silme işlemleri anlık olarak gerçekleşir. Yanlışlıkla silinen planlar, ekranın altında beliren modern Toast bildirimindeki **"Geri Al"** butonuyla tek tıkla geri getirilebilir.
+*   Mobil ekranlarda (örn. iPhone 13) alt navigasyon barı genişliğe tam oturacak şekilde duyarlı (`responsive`) tasarlanmıştır.
+
+### 💾 5. Esnek Veri Paylaşımı ve İçe Aktarma
+*   Aktif planlarınızı tek tıkla **`.json`** dosyası olarak indirebilirsiniz.
+*   Daha önce indirilen seyahat planı dosyalarını uygulamaya sürükleyip bırakarak veya dosya seçerek anında harita üzerine yükleyebilirsiniz.
 
 ---
 
-## 🔥 Firebase Bulut Senkronizasyonu Kurulumu
+## 🛠️ Teknolojik Altyapı (Tech Stack)
 
-Rotagram, Firebase yapılandırılmadığında tamamen çevrimdışı ve tarayıcı tabanlı (**LocalStorage**) modda çalışır. Kullanıcıların verilerini bulutta yedeklemek ve farklı cihazlardan erişmelerini sağlamak için şu adımları takip edebilirsiniz:
+*   **Arayüz Tasarımı:** Semantik HTML5, CSS3 Custom Properties (CSS Değişkenleri), Flexbox ve Grid sistemleri, pürüzsüz animasyonlar.
+*   **Programlama Dili:** Vanilla JavaScript (ES6+ Modüler Yapı).
+*   **Harita Motoru:** [Leaflet.js](https://leafletjs.com/) (Dinamik Katman Değişimi: Voyager, Uydu, Sokak, Karanlık Mod).
+*   **Rotalama Servisi:** OpenStreetMap (OSM) & [OSRM API](http://project-osrm.org/).
+*   **Veri Tabanı & Auth:** Google Firebase (Authentication & Cloud Firestore).
+*   **Coğrafi Arama:** [Nominatim API](https://nominatim.org/) ve [Overpass API](https://overpass-api.de/).
 
-1. [Firebase Console](https://console.firebase.google.com/) üzerinden yeni bir proje oluşturun.
-2. Projenizde **Authentication** servisini aktif edin ve **Email/Password** ile giriş yöntemini etkinleştirin.
-3. Projenizde **Cloud Firestore** veri tabanını aktif edin ve "Start in Test Mode" veya aşağıdaki kurallarla başlatın:
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
-   ```
-4. Firebase konsolundan web uygulaması oluşturarak API anahtarlarınızı alın.
-5. Proje klasöründeki [js/firebase.js](file:///C:/Users/muhammed.emin/Downloads/aaaaa/js/firebase.js) dosyasını açıp `firebaseConfig` değişkenini kendi API anahtarlarınız ile güncelleyin:
-   ```javascript
-   const firebaseConfig = {
-     apiKey: "API_ANAHTARINIZ",
-     authDomain: "PROJE_ID.firebaseapp.com",
-     projectId: "PROJE_ID",
-     storageBucket: "PROJE_ID.appspot.com",
-     messagingSenderId: "SENDER_ID",
-     appId: "APP_ID"
-   };
-   ```
-Uygulamanız anahtarları algıladığı anda otomatik olarak **Bulut Moduna** geçecek ve kullanıcı profilinde `☁️ Bulut` rozeti görüntülenecektir!
+---
 
+## 🔥 Firebase Bulut Kurulumu (Firebase Configuration)
+
+Rotagram, Firebase bağlantısı olmadığında yerel depolamada çalışmaya devam eder. Bulut senkronizasyonunu aktifleştirmek için şu adımları izleyin:
+
+1.  [Firebase Console](https://console.firebase.google.com/) üzerinde ücretsiz bir proje oluşturun.
+2.  **Authentication** sekmesinden **Email/Password** yöntemini etkinleştirin.
+3.  **Cloud Firestore** veri tabanını oluşturup, aşağıdaki güvenlik kurallarını (Security Rules) ekleyin:
+    ```javascript
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        match /users/{userId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+    }
+    ```
+4.  Proje dizinindeki [js/firebase.js](file:///C:/Users/muhammed.emin/Downloads/aaaaa/js/firebase.js) dosyasını açarak `firebaseConfig` nesnesini kendi API anahtarlarınız ile güncelleyin:
+    ```javascript
+    const firebaseConfig = {
+      apiKey: "API_KEY",
+      authDomain: "PROJECT_ID.firebaseapp.com",
+      projectId: "PROJECT_ID",
+      storageBucket: "PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+    ```
+
+Yapılandırma tamamlandığı anda uygulamanız otomatik olarak bulut moduna geçecek ve profilinizde `☁️ Bulut` rozeti yanacaktır.
+
+---
+
+## 🚀 SEO ve Performans Optimizasyonları
+
+*   **Semantik HTML5 Yapısı:** Hiyerarşik başlıklar (`h1`, `h2`, `h3`) ve açıklayıcı metin etiketleri sayesinde arama motorları için optimize edilmiştir.
+*   **Meta ve Open Graph Etiketleri:** Sosyal medya paylaşımlarında doğru başlık, açıklama ve önizleme görseli göstermek için OG etiketleri hazır durumdadır.
+*   **Hızlı Yükleme Süresi:** Harici kütüphaneler (`Leaflet`, `Tabler Icons`, `Google Fonts`) yüksek performanslı CDN ağları üzerinden asenkron ve ertelenmiş (`defer`/`async`) olarak yüklenir.
+
+---
+
+## 📜 Lisans (License)
+
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır. Kişisel veya ticari projelerinizde dilediğiniz gibi kullanabilir, değiştirebilir ve dağıtabilirsiniz.
