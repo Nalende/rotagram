@@ -1,14 +1,27 @@
 /* Rotagram Firebase Integration Module */
 
-// Firebase Yapılandırması (Kendi API anahtarlarınızı girerek bulut senkronizasyonunu aktifleştirebilirsiniz)
-const firebaseConfig = {
+// Firebase Yapılandırmasını Yerel Depolamadan (LocalStorage) yüklemeyi dene
+let firebaseConfig = {
   apiKey: "YOUR_API_KEY_HERE",
   authDomain: "YOUR_AUTH_DOMAIN_HERE",
   projectId: "YOUR_PROJECT_ID_HERE",
   storageBucket: "YOUR_STORAGE_BUCKET_HERE",
   messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "YOUR_APP_ID_HERE"
+  appId: "YOUR_APP_ID_HERE",
+  measurementId: "YOUR_MEASUREMENT_ID_HERE"
 };
+
+try {
+  const savedConfig = localStorage.getItem('rotagram_firebase_config');
+  if (savedConfig) {
+    const parsed = JSON.parse(savedConfig);
+    if (parsed && parsed.apiKey) {
+      firebaseConfig = parsed;
+    }
+  }
+} catch (e) {
+  console.error("Firebase config parsing error:", e);
+}
 
 let isFirebaseEnabled = false;
 let db = null;
@@ -150,4 +163,81 @@ async function firebaseLoadTrips(uid) {
     console.error("❌ Seyahat planları buluttan yüklenirken hata oluştu:", error);
     return [];
   }
+}
+
+/**
+ * Firebase Google Sign-In
+ */
+async function firebaseGoogleLogin() {
+  if (!isFirebaseEnabled) throw new Error("Firebase aktif değil.");
+  const provider = new firebase.auth.GoogleAuthProvider();
+  const userCredential = await auth.signInWithPopup(provider);
+  const user = userCredential.user;
+  
+  // Save user document in Firestore on login/register
+  await db.collection("users").doc(user.uid).set({
+    username: user.displayName || user.email.split('@')[0],
+    email: user.email,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  
+  return {
+    username: user.displayName || user.email.split('@')[0],
+    email: user.email,
+    uid: user.uid
+  };
+}
+
+/**
+ * Firebase Phone Authentication: SMS Kodu Gönder
+ */
+let recaptchaVerifier = null;
+let confirmationResult = null;
+
+async function firebasePhoneSendCode(phoneNumber) {
+  if (!isFirebaseEnabled) throw new Error("Firebase aktif değil.");
+  
+  // Dinamik Recaptcha Container
+  if (!document.getElementById('recaptcha-container')) {
+    const recaptchaDiv = document.createElement('div');
+    recaptchaDiv.id = 'recaptcha-container';
+    document.body.appendChild(recaptchaDiv);
+  }
+  
+  if (!recaptchaVerifier) {
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      'size': 'invisible'
+    });
+  }
+  
+  confirmationResult = await auth.signInWithPhoneNumber(phoneNumber, recaptchaVerifier);
+  return confirmationResult;
+}
+
+/**
+ * Firebase Phone Authentication: SMS Kodu Onayla
+ */
+async function firebasePhoneVerifyCode(code) {
+  if (!confirmationResult) throw new Error("Aktif bir SMS kodu doğrulama isteği bulunamadı.");
+  const result = await confirmationResult.confirm(code);
+  const user = result.user;
+  
+  if (!user.displayName) {
+    const defaultName = "Gezgin " + user.phoneNumber.slice(-4);
+    await user.updateProfile({
+      displayName: defaultName
+    });
+  }
+  
+  await db.collection("users").doc(user.uid).set({
+    username: user.displayName || "Gezgin",
+    email: user.email || user.phoneNumber,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  
+  return {
+    username: user.displayName || "Gezgin",
+    email: user.email || user.phoneNumber,
+    uid: user.uid
+  };
 }
