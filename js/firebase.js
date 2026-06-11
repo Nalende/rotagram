@@ -8,18 +8,7 @@ let firebaseConfig = {
   messagingSenderId: "633257393668",
   appId: "1:633257393668:web:3ae094514576e0d5febf51"
 };
-
-try {
-  const savedConfig = localStorage.getItem('rotagram_firebase_config');
-  if (savedConfig) {
-    const parsed = JSON.parse(savedConfig);
-    if (parsed && parsed.apiKey) {
-      firebaseConfig = parsed;
-    }
-  }
-} catch (e) {
-  console.error("Firebase config parsing error:", e);
-}
+// Firebase config is pre-configured and secure.
 
 let isFirebaseEnabled = false;
 let db = null;
