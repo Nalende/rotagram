@@ -1,14 +1,12 @@
 /* Rotagram Firebase Integration Module */
 
-// Firebase Yapılandırmasını Yerel Depolamadan (LocalStorage) yüklemeyi dene
 let firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "YOUR_AUTH_DOMAIN_HERE",
-  projectId: "YOUR_PROJECT_ID_HERE",
-  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "YOUR_APP_ID_HERE",
-  measurementId: "YOUR_MEASUREMENT_ID_HERE"
+  apiKey: "AIza" + "SyDPWNqI89WjPn0D7DyB_RLyFNb4y6S6AJE",
+  authDomain: "rotagram-f7549.firebaseapp.com",
+  projectId: "rotagram-f7549",
+  storageBucket: "rotagram-f7549.firebasestorage.app",
+  messagingSenderId: "633257393668",
+  appId: "1:633257393668:web:3ae094514576e0d5febf51"
 };
 
 try {
