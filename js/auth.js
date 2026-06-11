@@ -492,16 +492,6 @@ function renderFriendsView() {
               <button class="action-btn secondary style-btn-satellite" onclick="changeMapStyle('satellite')" style="padding:8px; font-size:11px; font-weight:600;">Uydu</button>
             </div>
           </div>
-          
-          <!-- Firebase Settings Reset -->
-          ${(typeof isFirebaseEnabled !== 'undefined' && isFirebaseEnabled) ? `
-            <div style="display:flex; flex-direction:column; gap:6px; border-top:1px dashed var(--border); padding-top:12px;">
-              <span style="font-size:11.5px; font-weight:600; color:var(--ink2);">Firebase Bulut Bağlantısı</span>
-              <button onclick="handleFirebaseReset()" class="action-btn secondary" style="padding:8px; font-size:11px; font-weight:600; color:#e74c3c; border-color:rgba(231,76,60,0.15); display:flex; align-items:center; justify-content:center; gap:4px;">
-                <i class="ti ti-trash" style="font-size:13px;"></i> Yapılandırmayı Sıfırla
-              </button>
-            </div>
-          ` : ''}
         </div>
 
         <!-- Data Management Box -->
